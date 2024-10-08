@@ -1,0 +1,30 @@
+
+E3_CPU32Debug/CPU Description.pdf
+E3_CPU32Debug/Simulate/codememory.lst
+E3_CPU32Debug/Simulate/codememory.mif
+E3_CPU32Debug/Simulate/cpu32.do
+E3_CPU32Debug/Simulate/ioport.do
+E3_CPU32Debug/Simulate/Project_3_CPU32_ioport_simulation.cr.mti
+E3_CPU32Debug/Simulate/Project_3_CPU32_ioport_simulation.mpf
+E3_CPU32Debug/Simulate/Results.txt
+E3_CPU32Debug/Simulate/vish_stacktrace.vstf
+E3_CPU32Debug/Simulate/vsim.wlf
+E3_CPU32Debug/Utility/Asm32
+E3_CPU32Debug/Utility/Asm32.exe
+E3_CPU32Debug/Utility/Asm32_orig.exe
+E3_CPU32Debug/Utility/AssemblerTests.lst
+E3_CPU32Debug/Utility/AssemblerTests.s
+E3_CPU32Debug/Utility/codememory.coe
+E3_CPU32Debug/Utility/codememory.lst
+E3_CPU32Debug/Utility/codememory.mif
+E3_CPU32Debug/Utility/codememory.mot
+E3_CPU32Debug/Utility/codememory.s
+E3_CPU32Debug/Utility/codememory_chaser.s
+E3_CPU32Debug/Utility/codememory_hardware.s
+E3_CPU32Debug/Utility/codememory_simple.s
+E3_CPU32Debug/Utility/Convert
+E3_CPU32Debug/Utility/Convert.exe
+E3_CPU32Debug/Utility/doit.cmd
+E3_CPU32Debug/Utility/doit.sh
+E3_CPU32Debug/Utility/ReadMe.txt
+E3_CPU32Debug/VHDL - Unsigned and Signed.pdf
