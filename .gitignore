@@ -28,3 +28,8 @@ E3_CPU32Debug/Utility/doit.cmd
 E3_CPU32Debug/Utility/doit.sh
 E3_CPU32Debug/Utility/ReadMe.txt
 E3_CPU32Debug/VHDL - Unsigned and Signed.pdf
+*.xmsgs
+*.html
+*.gise
+*.xreport
+*.xise
