@@ -8,6 +8,7 @@ use ieee.numeric_std.all;
 
 USE ieee.std_logic_textio.ALL;
 USE std.textio.ALL;
+use work.cpupackage.ALL;
 
 package debug is
 
@@ -17,18 +18,13 @@ package debug is
    
    procedure openLog( filePath : in string );
    procedure closeLog;
-   
-   procedure setLogging( mode : in boolean );
-
+ 
 end debug;
 
 package body debug is
 
    --  File to log results to
    FILE logFile: TEXT;
-
-   -- Set the following to true to turn on messages
-   shared variable logging : boolean := false;
 
    --=================================================
    -- Open given log file
@@ -43,7 +39,6 @@ package body debug is
       assert openStatus=OPEN_OK
          report "Log file open failure."
          severity error;
-      logging := true; 
    end procedure;
                
    --=================================================
@@ -54,15 +49,6 @@ package body debug is
 
    begin
       file_close(logFile);    
-      logging := false; 
-   end procedure;
-
-   --=================================================
-   -- Logging is turned on/off
-   --=================================================
-   procedure setLogging( mode : in boolean ) is
-   begin
-      logging := mode;
    end procedure;
 
    --*******************************************************
@@ -77,13 +63,11 @@ package body debug is
    variable writeMsgBuffer  : line; -- buffer for write messages
 
    begin
-      if (not logging) then
-         write( writeMsgBuffer, message );
-         assertMsgBuffer(writeMsgBuffer.all'range) := writeMsgBuffer.all;
-         writeline(logFile, writeMsgBuffer);
-         deallocate(writeMsgBuffer);
-         assert (false) report assertMsgBuffer severity note;
-      end if;
+      write( writeMsgBuffer, message );
+      assertMsgBuffer(writeMsgBuffer.all'range) := writeMsgBuffer.all;
+      writeline(logFile, writeMsgBuffer);
+      deallocate(writeMsgBuffer);
+      assert (false) report assertMsgBuffer severity note;
    end;
 
    --**************************************************************
@@ -100,15 +84,13 @@ package body debug is
    variable writeMsgBuffer  : line; -- buffer for write messages
 
    begin
-      if (not logging) then
-         write( writeMsgBuffer, message );
---         hwrite( writeMsgBuffer, slv );
-         write( writeMsgBuffer, to_bitvector(slv), left );
-         assertMsgBuffer(writeMsgBuffer.all'range) := writeMsgBuffer.all;
-         writeline(logFile, writeMsgBuffer);
-         deallocate(writeMsgBuffer);
-         assert (false) report assertMsgBuffer severity note;
-      end if;
+      write( writeMsgBuffer, message );
+--      hwrite( writeMsgBuffer, slv );
+      write( writeMsgBuffer, to_bitvector(slv), left );
+      assertMsgBuffer(writeMsgBuffer.all'range) := writeMsgBuffer.all;
+      writeline(logFile, writeMsgBuffer);
+      deallocate(writeMsgBuffer);
+      assert (false) report assertMsgBuffer severity note;
    end;
 
    --**************************************************************
@@ -126,18 +108,16 @@ package body debug is
    variable writeMsgBuffer : line; -- buffer for write messages
 
    begin
-      if (not logging) then
-         write( writeMsgBuffer, message );
---         hwrite( writeMsgBuffer, slv1 );
-         write( writeMsgBuffer, to_bitvector(slv1), left );
-         write( writeMsgBuffer, string'(" : ") );
---         hwrite( writeMsgBuffer, slv2 );
-         write( writeMsgBuffer, to_bitvector(slv2), left );
-         assertMsgBuffer(writeMsgBuffer.all'range) := writeMsgBuffer.all;
-         writeline(logFile, writeMsgBuffer);
-         deallocate(writeMsgBuffer);
-         assert (false) report assertMsgBuffer severity note;
-      end if;
+      write( writeMsgBuffer, message );
+--       hwrite( writeMsgBuffer, slv1 );
+      write( writeMsgBuffer, to_bitvector(slv1), left );
+      write( writeMsgBuffer, string'(" : ") );
+--      hwrite( writeMsgBuffer, slv2 );
+      write( writeMsgBuffer, to_bitvector(slv2), left );
+      assertMsgBuffer(writeMsgBuffer.all'range) := writeMsgBuffer.all;
+      writeline(logFile, writeMsgBuffer);
+      deallocate(writeMsgBuffer);
+      assert (false) report assertMsgBuffer severity note;
    end;
     
 end debug;
