@@ -28,11 +28,14 @@ end entity cpu32;
 architecture Behavioral of cpu32 is
 
 -- ALU signals
-signal aluOp                : AluOp;
+signal aluOp                : std_logic_vector( 2 downto 0);
 signal aluOperand1          : unsigned(31 downto 0);
 signal aluOperand2          : unsigned(31 downto 0);
 signal aluDataOut           : unsigned(31 downto 0);
 signal Z,N,V,C              : std_logic;
+signal doFlags              : std_logic;
+signal aluStart   			 : std_logic;
+signal aluComplete 			 : std_logic;
 
 -- Instruction register
 signal ir                  : std_logic_vector(31 downto 0);
@@ -77,17 +80,15 @@ signal dataOutBus          : std_logic_vector(31 downto 0);
 signal addressBus          : std_logic_vector(31 downto 0);
 signal writeEn             : std_logic;
 
--- Instruction opcode from IR
-signal irOp : IrOp;
-
 --************************************************************************
 begin
-   
-   -- Instruction opcode from IR
-   irOp  <= ir_op(ir);
-   
+
    pcOut <= pc(pcOut'range); -- to stop design being optimized away!
 
+   -- For later expansion
+   pinOut <= (others => '0');
+   pinDrv <= (others => '0');
+   
    --==============================================
    -- PC source data path
    --
@@ -140,7 +141,7 @@ begin
    -- Register File control
    --
    regControl:
-   process (ir, RegASource, aluDataOut, dataInBus)
+   process (ir, RegASource, aluDataOut, dataInBus, pc)
    begin
       regAAddr   <= ir_regA(ir);
       regBAddr   <= ir_regB(ir);
@@ -149,6 +150,8 @@ begin
       case RegASource is
          when aluOut      => regADataIn <= std_logic_vector(aluDataOut);
          when dataMemOut  => regADataIn <= dataInBus;
+         when reg31       =>  regAAddr <= "11111"; --R31
+                              regADataIn <= pc; --Program Counter
       end case;
 
    end process regControl;
@@ -182,17 +185,17 @@ begin
    -- ALU operation control
    --
    aluControl:
-   process ( ir, regBDataOut, regCDataOut, irOp )
+   process ( ir, regBDataOut, regCDataOut )
 
    variable signedImmediateValue   : unsigned(31 downto 0);
    variable unsignedImmediateValue : unsigned(31 downto 0);
 
    begin
 
-      if (irOp = IrOp_RegReg) then
+      if (ir_op(ir) = "000") or (ir_op(ir) = "001") then
          aluOp  <= ir_aluOp(ir);
       else
-         aluOp  <= ALUop_Add; -- add for all other opcodes
+         aluOp  <= ALUopAdd; -- add for all other opcodes
       end if;
 
       -- Set up operand 1 to ALU
@@ -202,11 +205,14 @@ begin
       signedImmediateValue   := signExtend(signedImmediateValue'length,   ir_immediate16(ir));
       unsignedImmediateValue := zeroExtend(unsignedImmediateValue'length, ir_immediate16(ir));
       
-      if (irOp = IrOp_RegReg) then
+      if (ir_op(ir) = "000") then
          aluOperand2  <= unsigned(regCDataOut);
-      elsif (irOp = IrOp_RegImmed) then
-         -- 32-bit zero-extended immediate value from ir
-         aluOperand2  <= unsignedImmediateValue;
+      elsif (ir_op(ir) = "001") then
+         if ir_aluOp(ir) = ALUopEor then
+            aluOperand2  <= signedImmediateValue;
+         else
+            aluOperand2  <= unsignedImmediateValue;
+         end if;
       else  
          -- 32-bit sign-extended immediate value from ir
          aluOperand2  <= signedImmediateValue;
@@ -227,7 +233,12 @@ begin
          Z         => Z,
          N         => N,
          V         => V,
-         C         => C
+         C         => C,
+         clock     => clock,
+         reset     => reset,
+         doFlags   => doFlags,
+         aluComplete => aluComplete,
+         aluStart => aluStart
          );
 
    --================================================
@@ -279,7 +290,10 @@ begin
          loadPC       => loadPC,
          loadIR       => loadIR,
          writeEn      => writeEn,
-         PCSource     => PCSource
+         PCSource     => PCSource,
+         doFlags      => doFlags,
+         aluStart 	 => aluStart,
+			aluComplete  => aluComplete
          );
 
 end architecture Behavioral;
