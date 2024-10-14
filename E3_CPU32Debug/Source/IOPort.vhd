@@ -115,24 +115,61 @@ inputSynch:
    -- Implements input synchronization to revent instability 
    -- when sampling asynchronous pins
    -- This should implement 2-level synchronization
-   process --(reset, clock) 
-   begin
-      wait until rising_edge(clock); -- REPLACE with your code
-   end process;
+   process (reset, clock) 
+      variable sync : std_logic_vector(15 downto 0);
+    begin
+        if reset = '1' then
+            pdir <= (others => '0'); -- Reset pdir on reset
+            sync := (others => '0');
+        elsif rising_edge(clock) then
+            pdir <= sync; -- Sample pinIn on clock edge
+            sync := pinIn;
+        end if;
+    end process;
    
 readControl:
    -- Implements the read function on the internal bus
-   process -- (portAddr,  pdor, pddr, pdir)
-   begin
-      wait until rising_edge(clock); -- REPLACE with your code
-   end process readControl;
+   process (portAddr, pdor, pddr, pdir)
+    begin
+        case portAddr is
+            when A_pdor =>
+                dataOut <= pdor; -- Read from PDOR
+            when A_pddr =>
+               dataOut <= pddr;
+            when A_pdir =>
+                dataOut <= pdir; -- Read from PDIR
+            when others =>
+                dataOut <= (others => 'X'); -- Default case
+        end case;
+    end process readControl;
 
 writeControl:
    -- Implements the write function on the internal bus
-   process -- (reset, clock)
-   begin
-      wait until rising_edge(clock); -- REPLACE with your code
-   end process writeControl;
+   process (reset, clock)
+    begin
+        if reset = '1' then
+            pdor <= (others => '0'); -- Reset PDOR on reset
+            pddr <= (others => '0'); -- Reset PDDR on reset
+        elsif rising_edge(clock) then
+            if writeEn = '1' then
+                case portAddr is
+                    when A_pdor =>
+                        pdor <= dataIn; -- Write to PDOR
+                    when A_pddr =>
+                        pddr <= dataIn; -- Write to PDDR
+                    when A_psor =>
+                        pdor <= pdor or dataIn; -- Set bits in PDOR
+                    when A_pcor =>
+                        pdor <= pdor and not dataIn; -- Clear bits in PDOR
+                        -- pdor <= (pdor xor dataIn) and not dataIn
+                    when A_ptor =>
+                        pdor <= pdor xor dataIn; -- Toggle bits in PDOR
+                    when others =>
+                        null; -- No action for other addresses
+                end case;
+            end if;
+        end if;
+    end process writeControl;
 
    -- General connections
    pinOut <= pdor;
