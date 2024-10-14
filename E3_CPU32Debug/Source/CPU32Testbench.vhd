@@ -19,12 +19,6 @@ signal reset      : std_logic;
 signal clock      : std_logic;
 signal pcOut      : std_logic_vector(31 downto 0);
 
-signal pinIn      : std_logic_vector(15 downto 0);
-signal pinOut     : std_logic_vector(15 downto 0);
-signal pinDrv     : std_logic_vector(15 downto 0);
-
-signal portIO     : std_logic_vector(15 downto 0);
-
 constant clockHigh   : time := 50 ns; 
 constant clockLow    : time := 50 ns; 
 constant clockPeriod : time := clockHigh + clockLow; 
@@ -58,27 +52,11 @@ begin
       clock       => clock,
       pcOut       => pcOut,
       
-      pinIn       => pinIn,
-      pinOut      => pinOut,
-      pinDrv      => pinDrv
+      pinIn    => (others => '0'),
+      pinOut   => open,
+      pinDrv   => open
       );
 
-   --****************************************************
-   -- Implements the IOport 3-state logic
-   --
-   process (pinDrv, pinOut)
-   begin
-      -- Real portIO are INOUT
-      portIO <= (others => 'Z');
-      for bitNum in portIO'left downto portIO'right loop
-         if (pinDrv(bitNum) = '1') then
-            portIO(bitNum)  <= pinOut(bitNum);
-         end if;
-      end loop;		
-   end process;
-
-   pinIn <= portIO;
-	
    --****************************************************
    -- Testbench
    -- Just provides a clock and terminates simulation
@@ -95,11 +73,7 @@ begin
       wait until rising_edge(clock);
       reset <= '0';
 
-      -- For initial testing - output only e.g. light-chaser example
-      portIO <= "ZZZZZZZZZZZZZZZZ";
-      --portIO <= "00000001ZZZZZZZZ";
-
-      wait for 40000 ns; -- Adjust to suit code execution time
+      wait for 34000 ns; -- Adjust to suit code execution time
       dwrite( string'("Simulation completed.") );
 
       -- end simulation
