@@ -17,7 +17,9 @@ entity alu is
            operand1  : in  unsigned(31 downto 0);
            operand2  : in  unsigned(31 downto 0);
            aluOutput : out unsigned(31 downto 0);
-           Z,N,V,C   : out std_logic
+           Z,N,V,C   : out std_logic;
+           clock, reset : in std_logic;
+           doFlags : in std_logic
          );
 end alu;
 
@@ -26,6 +28,8 @@ architecture Behavioral of alu is
 constant zero       : unsigned( 3 downto 0) := "0000";
 signal   aluOutputx : unsigned(32 downto 0);
 
+signal tempZ, tempN, tempV, tempC : std_logic;
+
 begin
 
 ALUProcess:
@@ -33,16 +37,16 @@ process ( aluOp, operand1, operand2, aluOutputx )
 begin
 
    -- Default values
-   V         <= '0';
+   tempV         <= '0';
 
    case aluOp is
       when AluOp_Add =>
          aluOutputx <= ('0' & operand1) + ('0' & operand2);
-         V  <= (not aluOutputx(31) and (operand1(31) and operand2(31))) or
+         tempV  <= (not aluOutputx(31) and (operand1(31) and operand2(31))) or
                (aluOutputx(31) and (not operand1(31) and not operand2(31)));
       when AluOp_Sub =>
          aluOutputx <= ('0' & operand1) - unsigned('0' & operand2);
-         V   <= (not aluOutputx(31) and (operand1(31) and not operand2(31))) or
+         tempV   <= (not aluOutputx(31) and (operand1(31) and not operand2(31))) or
                 (aluOutputx(31) and (not operand1(31) and operand2(31)));
       when AluOp_And =>
          aluOutputx <= '0' & (operand1 and operand2);
@@ -60,17 +64,33 @@ begin
          aluOutputx <= (others => 'X');
    end case;
  
-   N <= aluOutputx(31);
-   C <= aluOutputx(32);
+   tempN <= aluOutputx(31);
+   tempC <= aluOutputx(32);
    if (aluOutputx(31 downto 0) = x"00000000") then
-      Z <= '1';
+      tempZ <= '1';
    else
-      Z <= '0';
+      tempZ <= '0';
    end if;
 
    aluOutput <= aluOutputx(31 downto 0);
 
 end process ALUProcess;
+
+FlagUpdateProcess:
+process (clock, reset, doFlags)
+begin
+   if reset = '1' then
+      Z <= '0';
+      N <= '0';
+      V <= '0';
+      C <= '0';
+   elsif rising_edge(clock) and doFlags = '1' then
+      Z <= tempZ;
+      N <= tempN;
+      V <= tempV;
+      C <= tempC;
+   end if;
+end process FlagUpdateProcess;
  
 end Behavioral;
 

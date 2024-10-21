@@ -22,6 +22,8 @@ entity Control is
            regAWrite    : out std_logic;
            RegASource   : out RegASourceT; 
 
+           doFlags      : out std_logic;
+
            loadPC       : out std_logic;
            loadIR       : out std_logic;
            writeEn      : out std_logic;
@@ -107,6 +109,7 @@ begin
 
    -- Needed for use in case statements
    variable irOp : IrOp;
+   variable irAluOp : AluOp;
 
    begin
       -- Default control signal values inactive
@@ -124,6 +127,8 @@ begin
       nextCpuState  <= fetch;
 
       irOp := ir_op(ir); -- extract opcode field
+      irAluOp := ir_aluOp(ir);
+      doFlags <= '0';
    
       case cpuState is
 
@@ -151,6 +156,8 @@ begin
                   elsif (ir_braOp(ir) = BraOp_BSR) then  -- PC <- PC + offset; Reg31 <- PC;
                      loadPC       <= '1';
                      PCSource     <= branchPC;
+                     RegASource   <= reg31;
+                     regAWrite    <= '1';
                   else                                   -- if (cond) PC <- PC + offset
                      if (doBranch( Z, N, V, C, ir)) then
                         loadPC    <= '1';
@@ -168,6 +175,9 @@ begin
                when IrOp_regReg | IrOp_RegImmed =>  -- Ra <- Rb op Rc, Ra <- Rb op sex(immed)
                   regAWrite    <= '1';            
                   nextCpuState <= fetch;
+                  if (irAluOp /= AluOp_Ror) and (irAluOp /= AluOp_Swap) then
+                     doFlags <= '1';
+                  end if;
                when IrOp_LoadJump =>              
                   if (ir_regA(ir) /= "00000") then  -- Ra <- mem(Rb + sex(immed))
                      nextCpuState <= dataRead;

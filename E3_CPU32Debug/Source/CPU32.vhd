@@ -33,6 +33,7 @@ signal aluOperand1          : unsigned(31 downto 0);
 signal aluOperand2          : unsigned(31 downto 0);
 signal aluDataOut           : unsigned(31 downto 0);
 signal Z,N,V,C              : std_logic;
+signal doFlags              : std_logic;
 
 -- Instruction register
 signal ir                  : std_logic_vector(31 downto 0);
@@ -149,6 +150,8 @@ begin
       case RegASource is
          when aluOut      => regADataIn <= std_logic_vector(aluDataOut);
          when dataMemOut  => regADataIn <= dataInBus;
+         when reg31       => regAAddr   <= "11111";
+                             regADataIn <= pc;
       end case;
 
    end process regControl;
@@ -189,7 +192,7 @@ begin
 
    begin
 
-      if (irOp = IrOp_RegReg) then
+      if (irOp = IrOp_RegReg) or (irOp = IrOp_RegImmed) then
          aluOp  <= ir_aluOp(ir);
       else
          aluOp  <= ALUop_Add; -- add for all other opcodes
@@ -205,8 +208,11 @@ begin
       if (irOp = IrOp_RegReg) then
          aluOperand2  <= unsigned(regCDataOut);
       elsif (irOp = IrOp_RegImmed) then
-         -- 32-bit zero-extended immediate value from ir
-         aluOperand2  <= unsignedImmediateValue;
+         if (ir_aluOp(ir) = AluOp_Eor) then
+            aluOperand2 <= signedImmediateValue;
+         else  
+            aluOperand2 <= unsignedImmediateValue;
+         end if;
       else  
          -- 32-bit sign-extended immediate value from ir
          aluOperand2  <= signedImmediateValue;
@@ -227,7 +233,10 @@ begin
          Z         => Z,
          N         => N,
          V         => V,
-         C         => C
+         C         => C,
+         clock     => clock,
+         reset     => reset,
+         doFlags   => doFlags
          );
 
    --================================================
@@ -279,7 +288,8 @@ begin
          loadPC       => loadPC,
          loadIR       => loadIR,
          writeEn      => writeEn,
-         PCSource     => PCSource
+         PCSource     => PCSource,
+         doFlags      => doFlags
          );
 
 end architecture Behavioral;
