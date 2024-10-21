@@ -34,6 +34,8 @@ signal aluOperand2          : unsigned(31 downto 0);
 signal aluDataOut           : unsigned(31 downto 0);
 signal Z,N,V,C              : std_logic;
 signal doFlags              : std_logic;
+signal aluStart             : std_logic;
+signal aluComplete          : std_logic;
 
 -- Instruction register
 signal ir                  : std_logic_vector(31 downto 0);
@@ -236,7 +238,9 @@ begin
          C         => C,
          clock     => clock,
          reset     => reset,
-         doFlags   => doFlags
+         doFlags   => doFlags,
+         aluComplete => aluComplete,
+         aluStart    => aluStart
          );
 
    --================================================
@@ -289,7 +293,9 @@ begin
          loadIR       => loadIR,
          writeEn      => writeEn,
          PCSource     => PCSource,
-         doFlags      => doFlags
+         doFlags      => doFlags,
+         aluStart     => aluStart,
+         aluComplete  => aluComplete
          );
 
 end architecture Behavioral;
