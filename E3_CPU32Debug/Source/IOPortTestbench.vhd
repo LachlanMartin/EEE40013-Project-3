@@ -109,6 +109,7 @@ BEGIN
                          ) is
       begin
          -- Set up write
+         dWrite("Performing write ", newAddress, newData);
          addr <= newAddress;
          dataIn <= newData;
          writeEn <= '1';
@@ -133,6 +134,7 @@ BEGIN
          -- Capture read data on clock edge
          -- your code
          newData := dataOut;
+         dWrite("Performing read ", newAddress, dataOut);
          wait for 10 ns; -- space reads apart for visibility
       end;
 
