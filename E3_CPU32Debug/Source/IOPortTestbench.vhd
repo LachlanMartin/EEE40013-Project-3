@@ -110,8 +110,11 @@ BEGIN
       begin
 
          -- Set up write
+         addr <= newAddress;
+         dataIn <= newData;
+         writeEn <= '1';
          wait until rising_edge(clock); -- replace with your code
-
+         writeEn <= '0';
          wait for 10 ns; -- space writes apart for visibility
       end;
 
@@ -126,10 +129,12 @@ BEGIN
                         ) is
       begin
          -- Set up read - this is a combinational path
+         addr <= newAddress;
          wait until rising_edge(clock); -- replace with your code
-
          -- Capture read data on clock edge
          -- your code
+         newData := dataOut;
+         wait until rising_edge(clock);
 
          wait for 10 ns; -- space reads apart for visibility
       end;
