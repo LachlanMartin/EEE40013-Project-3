@@ -22,15 +22,10 @@ entity Control is
            regAWrite    : out std_logic;
            RegASource   : out RegASourceT; 
 
-           doFlags      : out std_logic;
-
            loadPC       : out std_logic;
            loadIR       : out std_logic;
            writeEn      : out std_logic;
-           PCSource     : out PCSourceT;
-
-           aluStart : out std_logic;
-           aluComplete : in std_logic
+           PCSource     : out PCSourceT
            );
 end entity Control;
 
@@ -41,40 +36,12 @@ type   CpuStateType is (fetch, decode, execute, dataRead, dataWrite);
 signal cpuState             : CpuStateType;
 signal nextCpuState         : CpuStateType;
 
+signal branchOp : BraOp;
+
 begin
     
-   --************************************************************************
-   -- Process to monitor the action in the system for debugging.
-   --
-
-   -- synopsys translate_off
-   --monitor:
-   --process( reset, clock )
-   --
-   --begin
-   --
-   --   if (clock'event and clock = '1') then
-   --      case cpuState is
-   --         when init =>
-   --            dwrite("Initialisation" );
-   --         when fetch => -- load next word into instruction register
-   --            dwrite("Fetched data ", pc, codeMemDataOut);
-   --         when decode =>
-   --            dwrite("Decoding");
-   --         when execute =>
-   --            dwrite("Executing");
-   --         when dataWrite =>     -- write general register to memory
-   --            dwrite("Data write");
-   --         when dataRead =>      -- read general register from memory
-   --            dwrite("Data read");
-   --         when others =>
-   --            null;
-   --      end case;
-   --   end if;
-   --end process monitor;
-   -- synopsys translate_on
-   --
-   --
+   branchOp <= ir_braOp(ir);
+    
    --************************************************************************
    -- Synchronous elements
    --
@@ -98,7 +65,7 @@ begin
    -- Control signals
    --
    combinational:
-   process ( cpuState, ir, Z,N,V,C, aluComplete )
+   process ( cpuState, ir, Z,N,V,C )
 
    --************************************************************************
    -- Determines if a conditional branch is taken
@@ -108,31 +75,38 @@ begin
                      ) return boolean is
 
    variable res       : std_logic;
-   variable condition : std_logic_vector(3 downto 0);
+   variable condition : BraOp;
 
    begin
 
-      condition := ir_branchCondition(ir);
+      condition := ir_braOp(ir);
 
-      case condition(3 downto 1) is
-         when BRA    =>  res :=  '1';              -- BRA / BSR
-         when BCS    =>  res :=  C;                -- BCS=BLO / BCC=BHS (unsigned)
-         when BEQ    =>  res :=  Z;                -- BEQ / BNE (both)
-         when BVS    =>  res :=  V;                -- BVS / BVC (signed)
-         when BMI    =>  res :=  N;                -- BMI / BPL (signed)
-         when BLT    =>  res := (N xor V);         -- BLT / BGE (signed)
-         when BLE    =>  res := (Z or (N xor V));  -- BLE / BGT (signed)
-         when BLS    =>  res := (C or Z);          -- BLS / BHI (unsigned)
+      case condition is
+         when BraOp_BRA    =>  res :=  '1';              
+         when BraOp_BCS    =>  res :=  C;                    -- BCS=BLO (unsigned)
+         when BraOp_BEQ    =>  res :=  Z;                    -- (both)
+         when BraOp_BVS    =>  res :=  V;                    -- (signed)
+         when BraOp_BMI    =>  res :=  N;                    -- (signed)
+         when BraOp_BLT    =>  res := (N xor V);             -- (signed)
+         when BraOp_BLE    =>  res := (Z or (N xor V));      -- (signed)
+         when BraOp_BLS    =>  res := (C or Z);              -- (unsigned)
+         when BraOp_BSR    =>  res :=  '1';              
+         when BraOp_BCC    =>  res := not C;                 -- BCC=BHS (unsigned)
+         when BraOp_BNE    =>  res := not Z;                 -- (both)
+         when BraOp_BVC    =>  res := not V;                 -- (signed)
+         when BraOp_BPL    =>  res := not N;                 -- (signed)
+         when BraOp_BGE    =>  res := not (N xor V);         -- (signed)
+         when BraOp_BGT    =>  res := not (Z or (N xor V));  -- (signed)
+         when BraOp_BHI    =>  res := not (C or Z);          -- (unsigned)
          when others =>  res := 'X';
       end case;
 
-      return (condition(0) xor res) = '1';
+      return res = '1';
 
    end function doBranch;
 
    -- Needed for use in case statements
-   variable irOp : std_logic_vector(2 downto 0);
-   variable irAluOp : std_logic_vector(2 downto 0);
+   variable irOp : IrOp;
 
    begin
       -- Default control signal values inactive
@@ -145,16 +119,12 @@ begin
       regAWrite     <= '0';
       RegASource    <= aluOut;
 
-      writeEn  <= '0';
+      writeEn       <= '0';
 
       nextCpuState  <= fetch;
 
       irOp := ir_op(ir); -- extract opcode field
-      irAluOp := ir_aluOp(ir); -- extract aluOpCode field
-      doFlags <= '0';
-
-      aluStart <= '0';
-
+   
       case cpuState is
 
          when fetch => -- load next word into instruction register
@@ -164,28 +134,24 @@ begin
 
          when decode =>
             case irOp is
-               when "000" =>                                -- Ra <- Rb op Rc
+               when IrOp_regReg =>                       -- Ra <- Rb op Rc
                   nextCpuState <= execute;
-                  aluStart <= '1';
-               when "001" =>                                -- Ra <- Rb op sex(immed)
+               when IrOp_RegImmed =>                     -- Ra <- Rb op sex(immed)
                   nextCpuState <= execute;
-                  aluStart <= '1';
-               when "010" =>                                -- Ra <- mem(Rb + sex(immed))
-                                                            -- PC <- Rb op sex(immed)
+               when IrOp_LoadJump =>                     -- Ra <- mem(Rb + sex(immed))
+                                                         -- PC <- Rb op sex(immed)
                   nextCpuState <= execute;
-               when "011" =>                                -- mem(Rb + sex(immed)) <- Rc
+               when IrOp_Store =>                        -- mem(Rb + sex(immed)) <- Rc
                   nextCpuState <= execute;
-               when "100" =>
+               when IrOp_Branch =>
                   nextCpuState <= fetch;
-                  if (ir_branchCondition(ir) = "0000") then     -- PC <- PC + offset
+                  if (ir_braOp(ir) = BraOp_BRA) then     -- PC <- PC + offset
                      loadPC       <= '1';
                      PCSource     <= branchPC;
-                  elsif (ir_branchCondition(ir) = "0001") then  -- PC <- PC + offset; Reg31 <- PC;
+                  elsif (ir_braOp(ir) = BraOp_BSR) then  -- PC <- PC + offset; Reg31 <- PC;
                      loadPC       <= '1';
                      PCSource     <= branchPC;
-                     RegASource   <= reg31;
-                     regAWrite    <= '1';
-                  else                                      -- if (cond) PC <- PC + offset
+                  else                                   -- if (cond) PC <- PC + offset
                      if (doBranch( Z, N, V, C, ir)) then
                         loadPC    <= '1';
                         PCSource  <= branchPC;
@@ -199,17 +165,10 @@ begin
 
          when execute =>
             case irOp is
-               when "000" | "001" =>  -- Ra <- Rb op Rc, Ra <- Rb op sex(immed)
-                  if aluComplete = '1' then
-                     regAWrite    <= '1';            
-                     nextCpuState <= fetch;
-                     if irAluOp /= "101" and irAluOp /= "110" then -- swap and ROR should not update the ALU Flags
-                        doFlags <= '1';
-                     end if;
-                  else
-                     nextCpuState <= execute;
-                  end if;
-               when "010" =>              
+               when IrOp_regReg | IrOp_RegImmed =>  -- Ra <- Rb op Rc, Ra <- Rb op sex(immed)
+                  regAWrite    <= '1';            
+                  nextCpuState <= fetch;
+               when IrOp_LoadJump =>              
                   if (ir_regA(ir) /= "00000") then  -- Ra <- mem(Rb + sex(immed))
                      nextCpuState <= dataRead;
                   else                              -- PC <- Rb op sex(immed)
@@ -217,7 +176,7 @@ begin
                      loadPC       <= '1';
                      nextCpuState <= fetch;
                   end if;
-               when "011" =>                        -- mem(Rb + sex(immed)) <- Ra
+               when IrOp_Store =>                   -- mem(Rb + sex(immed)) <- Ra
                      nextCpuState <= dataWrite;
                when others =>
                   null;
