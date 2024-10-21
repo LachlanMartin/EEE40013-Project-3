@@ -83,6 +83,11 @@ signal writeEn             : std_logic;
 -- Instruction opcode from IR
 signal irOp : IrOp;
 
+-- ADDED SIGNALS
+signal ioPortWrite			: std_logic;
+signal ioPortAddr				: std_logic_vector(2 downto 0);
+signal ioPortDataIn        : std_logic_vector(15 downto 0);
+signal ioPortDataOut       : std_logic_vector(15 downto 0);
 --************************************************************************
 begin
    
@@ -91,6 +96,10 @@ begin
    
    pcOut <= pc(pcOut'range); -- to stop design being optimized away!
 
+   -- For later expansion
+   pinOut <= (others => '0');
+   pinDrv <= (others => '0');
+   
    --==============================================
    -- PC source data path
    --
@@ -143,7 +152,7 @@ begin
    -- Register File control
    --
    regControl:
-   process (ir, RegASource, aluDataOut, dataInBus)
+   process (ir, RegASource, aluDataOut, dataInBus, pc, irOp)
    begin
       regAAddr   <= ir_regA(ir);
       regBAddr   <= ir_regB(ir);
@@ -250,17 +259,34 @@ begin
    -- Address bus connections
    addressBus     <= std_logic_vector(aluDataOut);
    dataMemAddr    <= addressBus(dataMemAddr'left downto 2); -- Note: Memory is 32-bit aligned
-
+	ioPortAddr     <= addressBus(2 downto 0);
    -- DataOut bus connections
    dataOutBus     <= regCDataOut;
    dataMemDataIn  <= dataOutBus;
-   
+   ioPortDataIn   <= dataOutBus(15 downto 0);
    -- DataIn bus connections
-   dataInBus      <= dataMemDataOut;
+	-- ADDED MUX
+   dataInBus      <= dataMemDataOut when addressBus(15) = '0' else
+							ioPortDataOut  when addressBus(15) = '1';
    -- Memory Selection
-   dataMemWrite   <= writeEn;
-
-   --=============================================================
+	-- ADDED ioPortWrite AND CHECK IF ADDRESSBUS 15
+   dataMemWrite   <= writeEn and not addressBus(15);
+	ioPortWrite    <= writeEn and     addressBus(15);
+	-- ADDED IOPort
+	-- IO Port instantiation
+	theIOPort:
+	entity work.IOPort
+		port map (
+			reset   => reset,			--
+         clock   => clock,			--
+         writeEn => ioPortWrite,
+         addr    => ioPortAddr,
+         dataIn  => ioPortDataIn,
+         dataOut => ioPortDataOut,
+         pinIn   => pinIn,
+         pinOut  => pinOut,
+         pinDrv  => pinDrv
+		);
    -- Data Memory instantiation
    -- Word access (A1..0 not used)
    dataMem:
