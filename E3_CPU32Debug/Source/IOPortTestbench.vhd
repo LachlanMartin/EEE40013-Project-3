@@ -197,52 +197,21 @@ BEGIN
       checkValue("IOValue", portIO, x"0000");
 
       -- Your code for other tests
-      -- Reset before the next test
-      reset <= '1';
-      wait for 105 ns;
-      reset <= '0';
-      wait until rising_edge(clock);
-
-      -- Test: Write and Read Back from PDORAddress
-      dwrite(string'("Testing write and read from PDORAddress."));
-      busWrite(PDORAddress, x"ABCD"); -- Write value 0xABCD
-      wait for 10 ns; -- Wait for the write to complete
-      busRead(PDORAddress, tempData); -- Read back the value
-      checkValue("Read back value from PDORAddress", tempData, x"ABCD");
-
-      -- Reset before the next test
-      reset <= '1';
-      wait for 105 ns;
-      reset <= '0';
-      wait until rising_edge(clock);
-
-      -- Test: Write and Read Back from PDDRAddress
-      dwrite(string'("Testing write and read from PDDRAddress."));
-      busWrite(PDDRAddress, x"FFFF"); -- Set all pins as output
-      wait for 10 ns; -- Wait for the write to complete
-      busRead(PDDRAddress, tempData); -- Read back the value
-      checkValue("Read back value from PDDRAddress", tempData, x"FFFF");
-
-      -- Reset before the next test
-      reset <= '1';
-      wait for 105 ns;
-      reset <= '0';
-      wait until rising_edge(clock);
-
-      -- Continue with other tests, following the same pattern...
-      
-      -- Test: Write to PSORAddress and verify
-      dwrite(string'("Testing write to PSORAddress."));
-      busWrite(PSORAddress, x"0001"); -- Set bit 0
-      wait for 10 ns; -- Wait for the write to complete
-      busRead(PDORAddress, tempData); -- Read back the value
-      checkValue("Verify PDOR after setting PSOR", tempData, x"0001"); -- Replace x"ABCD" with the expected value after setting
-
-      -- Reset before the next test
-      reset <= '1';
-      wait for 105 ns;
-      reset <= '0';
-      wait until rising_edge(clock);
+      -- test set
+      busWrite( PDORAddress, x"AAAA" );
+      busWrite( PSORAddress, x"FF00" );
+      busRead(PDORAddress, tempData);
+      checkValue("PDOR Value", tempData, x"FFAA");
+      -- test clear
+      busWrite( PDORAddress, x"AAAA" );
+      busWrite( PCORAddress, x"FF00" );
+      busRead(PDORAddress, tempData);
+      checkValue("PDOR Value", tempData, x"00AA");
+      -- test toggle
+      busWrite( PDORAddress, x"AAAA" );
+      busWrite( PTORAddress, x"FF00" );
+      busRead(PDORAddress, tempData);
+      checkValue("PDOR Value", tempData, x"55AA");
       
       wait for 4*clockPeriod;
 
