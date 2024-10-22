@@ -20,8 +20,8 @@ entity alu is
            Z,N,V,C   : out std_logic;
            clock, reset : in std_logic;
            doFlags : in std_logic;
-           aluStart : out std_logic;
-           aluComplete : in std_logic
+           aluStart : in std_logic;
+           aluComplete : out std_logic
          );
 end alu;
 
